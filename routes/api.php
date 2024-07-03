@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\GeneralController;
+use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\TempPODTLController;
 use App\Http\Controllers\TempPOMSTController;
 use App\Http\Controllers\TempRODTLController;
@@ -52,4 +54,17 @@ Route::prefix('receiving-order')->group(function (){
         Route::put('/{fc_rono}', 'updateTempRODTL');
         Route::get('/{fc_rono}', 'getAllTempRODTLbyRONO');
     });
+});
+
+Route::prefix('supplier')->controller(SupplierController::class)->group(function() {
+   Route::get('/', 'getAllSupplier'); 
+   Route::get('/{fc_suppliercode}', 'getDetailSupplier');
+   Route::post('/', 'createSupplier');
+   Route::put('/{fc_suppliercode}', 'updateSupplier');
+   Route::delete('/{fc_suppliercode}', 'deleteSupplier');
+});
+
+Route::prefix('general')->controller(GeneralController::class)->group(function() {
+    Route::get('/bank', 'getBank');
+    Route::get('/pph-type', 'getTypePPH');
 });
