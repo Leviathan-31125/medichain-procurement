@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\TRXType;
+use App\Models\Warehouse;
 use Illuminate\Http\Request;
 
 class GeneralController extends Controller
@@ -22,8 +23,8 @@ class GeneralController extends Controller
         return response()->json($data);
     }
 
-    public function getTypeSupplier() {
-        $data = TRXType::where('fc_trx', 'CUST_TYPE')->get();
+    public function getAllWarehouse() {
+        $data = Warehouse::get();
         return response()->json($data);
     }
 }

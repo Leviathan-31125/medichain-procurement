@@ -21,20 +21,31 @@ class TempPOMSTController extends Controller
 
     public function getDetailTempPOMST ($fc_pono) {
         $pono_decoded = $this->DECODE_KEY($fc_pono);
-        $TempPOMST = TempPOMST::find($pono_decoded);
+        $TempPOMST = TempPOMST::with(['temppodtl', 'supplier', 'temppodtl.stock'])->find($pono_decoded);
 
         if($TempPOMST)
             return response()->json(['status' => 200, 'data' => $TempPOMST]);
-        return response()->json(['status' => 400, 'message' => "Not Found! Purchase Order aktif tidak ditemukan"]);
+        return response()->json(['status' => 400, 'message' => "Not Found! Purchase Order aktif tidak ditemukan"], 400);
+    }
+
+    public function checkAvailableTempPOMST ($fc_pono) {
+        $pono_decoded = $this->DECODE_KEY($fc_pono);
+        $TempPOMST = TempPOMST::find($pono_decoded);
+
+        if($TempPOMST)
+            return response()->json(['status' => 200, 'available' => true]);
+        return response()->json(['status' => 200, 'available' => false]);
     }
 
     public function createTempPOMST (Request $request) {
         $validator = Validator::make($request->all(), [
             'fc_pono' => 'required',
-            'fc_suppliercode' => 'required'
+            'fc_suppliercode' => 'required',
+            'fd_podate_user' => 'required'
         ], [
             'fc_pono.required' => 'No. Purchase Order wajib diisi untuk diproses',
-            'fc_suppliercode.required' => 'Supplier harus diisi untuk melakukan Purchase Order'
+            'fc_suppliercode.required' => 'Supplier harus diisi untuk melakukan Purchase Order',
+            'fd_podate_user.required' => 'Tgl PO haru diisi'
         ]);
 
         if ($validator->fails()){
@@ -55,6 +66,7 @@ class TempPOMSTController extends Controller
         $created = TempPOMST::create([
             'fc_pono' => $request->fc_pono,
             'fc_suppliercode' => $request->fc_suppliercode,
+            'fd_podate_user' => $request->fd_podate_user
         ]);
 
         if($created) 
@@ -69,33 +81,35 @@ class TempPOMSTController extends Controller
             'fc_potransport' => 'required',
             'fv_destination' => 'required',
             'fd_podate_user' => 'required',
+            'fm_downpayment' => 'required'
         ], [
             'fd_poexpired.required' => 'Masukkan masa berlaku Purchase Order',
             'fc_potransport.required' => 'Media transportasi Purchase Order kosong',
             'fv_destination.required' => 'Alamat penerimaan barang tidak boleh kosong',
-            'fd_podate_user.required' => 'Tanggal PO harus disertakan'
+            'fd_podate_user.required' => 'Tanggal PO harus disertakan',
+            'fm_downpayment.required' => 'Nominal DP harus disertakan'
         ]);
 
         if($validator->fails()){
             return response()->json([
                 'status' => 300,
                 'message' => $validator->errors()->first()
-            ]);
+            ], 400);
         }
         
         $pono_decoded = $this->DECODE_KEY($fc_pono);
         $TempPOMST = TempPOMST::find($pono_decoded);
         if (!$TempPOMST)
-            return response()->json(['status' => 400, 'message' => "Not Found! Purchase Order aktif tidak ditemukan"]);
+            return response()->json(['status' => 400, 'message' => "Not Found! Purchase Order aktif tidak ditemukan"], 400);
 
         $request->fm_downpayment == null ? $request->merge(['fm_downpayment' => 0]) : '';
         $request->ft_description == null ? $request->merge(['ft_description' => '']) : '';
         
         $updated = $TempPOMST->update($request->all());
         if ($updated)
-            return response()->json(['status' => 201, 'message' => "Atribut Purchase Order berhasil dilengkapi"]);
+            return response()->json(['status' => 201, 'message' => "Atribut Purchase Order berhasil dilengkapi"], 201);
         
-        return response()->json(['status' => 400, 'message' => "Updated Fail! Gagal mengupdate Atribut Purchase Order"]);
+        return response()->json(['status' => 400, 'message' => "Updated Fail! Gagal mengupdate Atribut Purchase Order"], 400);
     }
 
     public function submitTempPOMST ($fc_pono){
@@ -123,6 +137,31 @@ class TempPOMSTController extends Controller
             return response()->json([
                 'status' => 400,
                 'message' => 'Create Failed! Purchase Order gagal dibuat'.$err->getMessage()
+            ]);
+        }
+    }
+
+    public function cancelTempPOMST ($fc_pono){
+        $pono_decoded = $this->DECODE_KEY($fc_pono);
+        $TempPOMST = TempPOMST::find($pono_decoded);
+        if (!$TempPOMST)
+            return response()->json(['status' => 400, 'message' => "Not Found! Purchase Order aktif tidak ditemukan"]);
+
+        DB::beginTransaction();
+
+        try {
+            $deletedTempPODTL = TempPODTL::where('fc_pono', $pono_decoded)->delete();
+            $deletedTempPOMST = TempPOMST::where('fc_pono', $pono_decoded)->delete();
+
+            DB::commit();
+
+            if($deletedTempPODTL && $deletedTempPOMST)
+                return response()->json(['status' => 201, 'message' => 'Purchase Order berhasil dicancel']);
+        } catch (Exception $err) {
+            DB::rollback();
+            return response()->json([
+                'status' => 400,
+                'message' => 'Delete Failed! Purchase Order gagal dibatalkan'.$err->getMessage()
             ]);
         }
     }

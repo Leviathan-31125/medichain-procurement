@@ -26,19 +26,21 @@ class TempPODTLController extends Controller
             'fc_barcode' => 'required',
             'fc_statusbonus' => 'required',
             'fm_price' => 'required',
+            'fm_discprice' => 'required',
             'fn_qty' => 'required|integer|min:1',
         ], [
             'fc_barcode.required' => 'Kode Barang harus diisi',
             'fn_qty.required' => 'Kuantitas harus diisi',
             'fc_statusbonus.required' => 'Status Bonus atau Reguler tidak diketahui',
             'fm_price.required' => 'Tentukan harga sebelum melakukan Purchase Order',
+            'fm_discprice.required' => 'Harga diskon harus disertakan, paling tidak 0'
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'status' => 300,
                 'message' => $validator->errors()->first()
-            ]);
+            ], 400);
         }
         
         $pono_decoded = $this->DECODE_KEY($fc_pono);
@@ -48,7 +50,7 @@ class TempPODTLController extends Controller
 
         $check_stock = Stock::find($request->fc_barcode);
         if(!$check_stock) 
-            return response()->json(['status' => 400, 'message' => 'Not Found! Stock tidak tersedia pada system']);
+            return response()->json(['status' => 400, 'message' => 'Not Found! Stock tidak tersedia pada system'], 400);
 
         $check_temppodtl = TempPODTL::where([
             'fc_pono' => $pono_decoded,
@@ -56,7 +58,7 @@ class TempPODTLController extends Controller
             'fc_statusbonus' => $request->fc_statusbonus
         ])->first();
         if($check_temppodtl) 
-            return response()->json(['status' => 400, 'message' => 'Duplicate Data! Stock sudah tersedia pada Purchase Order']);
+            return response()->json(['status' => 400, 'message' => 'Duplicate Data! Stock sudah tersedia pada Purchase Order'], 400);
 
         $request->fm_discprice == null? $request->merge(['fm_discprice' => 0]) : $request->fm_discprice;
     
@@ -71,8 +73,8 @@ class TempPODTLController extends Controller
         ]);
 
         if($addTempPODTL)
-            return response()->json(['status' => 201, 'message' => 'Stock berhasil ditambahkan']);
-        return response()->json(['status' => 400, 'message' => 'Stock Gagal ditambahkan']);
+            return response()->json(['status' => 201, 'message' => 'Stock berhasil ditambahkan'], 200);
+        return response()->json(['status' => 400, 'message' => 'Stock Gagal ditambahkan'], 400);
     }
 
     public function removeTempPODTL (Request $request, $fc_pono) {
@@ -89,6 +91,11 @@ class TempPODTLController extends Controller
             return response()->json(['status' => 201, 'message' => 'Stock berhasil diremove']);
 
         return response()->json(['status' => 400, 'message' => 'Stock Gagal dihapus']);
+    }
+
+    public function getAllStock() {
+        $data = Stock::with('brand')->get();
+        return response()->json($data);
     }
 
     private function DECODE_KEY($key) {
