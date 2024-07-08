@@ -26,4 +26,8 @@ class POMST extends Model
     public function supplier () {
         return $this->hasOne(Supplier::class, 'fc_suppliercode', 'fc_suppliercode');
     }
+
+    public function romst () {
+        return $this->hasMany(ROMST::class, 'fc_pono', 'fc_pono');
+    }
 }

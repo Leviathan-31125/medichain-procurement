@@ -14,7 +14,7 @@ class TempRODTLController extends Controller
         $rono_decoded = $this->DECODE_KEY($fc_rono);
         $TempROMST = TempROMST::find($rono_decoded);
         if(!$TempROMST)
-            return response()->json(['status' => 400, 'message' => "Invalid Data! Data Receiving Order tidak ditemukan"]);
+            return response()->json(['status' => 400, 'message' => "Invalid Data! Data Receiving Order tidak ditemukan"], 400);
 
         $TempRODTL = TempRODTL::where('fc_rono', $rono_decoded)->get();
         return response()->json(['status' => 200, 'data' => $TempRODTL]);
@@ -25,6 +25,7 @@ class TempRODTLController extends Controller
             'fc_barcode' => 'required',
             'fc_statusbonus' => 'required',
             'fm_price' => 'required',
+            'fm_discprice' => 'required',
             'fn_qty' => 'required|integer|min:1',
             'fc_batch' => 'required',
             'fd_expired' => 'required'
@@ -41,13 +42,13 @@ class TempRODTLController extends Controller
             return response()->json([
                 'status' => 300,
                 'message' => $validator->errors()->first()
-            ]);
+            ], 400);
         }
 
         $rono_decoded = $this->DECODE_KEY($fc_rono);
         $TempROMST = TempROMST::find($rono_decoded);
         if(!$TempROMST)
-            return response()->json(['status' => 400, 'message' => "Invalid Data! Data Receiving Order tidak ditemukan"]);
+            return response()->json(['status' => 400, 'message' => "Invalid Data! Data Receiving Order tidak ditemukan"], 400);
 
         $checkPODTL = PODTL::where([
             'fc_pono' => $TempROMST->fc_pono,
@@ -55,10 +56,10 @@ class TempRODTLController extends Controller
         ])->first();
 
         if(!$checkPODTL)
-            return response()->json(['status' => 400, 'message' => 'Invalid Data! Maaf kode barang tidak ada dalam pesanan']);
+            return response()->json(['status' => 400, 'message' => 'Invalid Data! Maaf kode barang tidak ada dalam pesanan'], 400);
 
         if($checkPODTL->fn_qty < ($request->fn_qty + $checkPODTL->fn_qty_ro))
-            return response()->json(['status' => 400, 'message' => 'Over Stock! Jumlah stock melebihi pesanan']);
+            return response()->json(['status' => 400, 'message' => 'Over Stock! Jumlah stock melebihi pesanan'], 400);
 
         $request->fm_discprice == null? $request->merge(['fm_discprice' => 0]) : $request->fm_discprice;
 

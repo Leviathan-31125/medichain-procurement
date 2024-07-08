@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\GeneralController;
 use App\Http\Controllers\POMSTController;
+use App\Http\Controllers\ROMSTController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\TempPODTLController;
 use App\Http\Controllers\TempPOMSTController;
@@ -29,6 +30,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::prefix('purchase-order')->group(function() {
     Route::controller(POMSTController::class)->group(function() {
         Route::get('/', 'getAllPOMST');
+        Route::get('/{fc_pono}', 'getDetailPOMST');
     });
     
     Route::prefix('temp-po-mst')->controller(TempPOMSTController::class)->group(function(){
@@ -50,12 +52,18 @@ Route::prefix('purchase-order')->group(function() {
 });
 
 Route::prefix('receiving-order')->group(function (){
+    Route::controller(ROMSTController::class)->group(function() {
+        Route::get('/', 'getAllROMST');
+    });
+
     Route::prefix('temp-ro-mst')->controller(TempROMSTController::class)->group(function() {
         Route::get('/', 'getAllTempROMST');
-        Route::get('/{fc_pono}', 'getDetailTempROMST');
+        Route::get('/{fc_rono}', 'getDetailTempROMST');
+        Route::get('/check/{fc_rono}', 'checkAvailableTempROMST');
         Route::post('/', 'createTempROMST');
         Route::put('/{fc_rono}', 'setDetailTempROMST');
         Route::put('/{fc_rono}/submit', 'submitTempROMST');
+        Route::put('/{fc_rono}/cancel', 'cancelTempROMST');
     });
     Route::prefix('temp-ro-dtl')->controller(TempRODTLController::class)->group(function() {
         Route::post('/{fc_rono}', 'addTempRODTL');
